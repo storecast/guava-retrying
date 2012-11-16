@@ -8,7 +8,7 @@ apply plugin: 'signing'
 sourceCompatibility = 1.6
 
 group = 'com.github.rholder'
-version = '1.0.1'
+version = '1.0.2-SNAPSHOT'
 ext.packaging = 'jar'
 
 repositories {
@@ -55,7 +55,7 @@ task wrapper(type: Wrapper) {
 }
 
 //********* artifact signing *********
-if(gradle.startParameter.taskNames.contains("uploadArchives")) {
+if (gradle.startParameter.taskNames.contains("uploadArchives")) {
     signing {
         sign configurations.archives
     }
