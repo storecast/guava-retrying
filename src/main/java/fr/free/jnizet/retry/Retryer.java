@@ -1,5 +1,6 @@
 package fr.free.jnizet.retry;
 
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 
@@ -8,6 +9,8 @@ import javax.annotation.concurrent.Immutable;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 
 /**
  * A retryer, which executes a call, and retries it until it succeeds, or
@@ -30,11 +33,11 @@ public final class Retryer<V> {
 
     /**
      * Constructor
-     * @param stopStrategy the strategy used to decide when the retryer must stop retrying
-     * @param waitStrategy the strategy used to decide how much time to sleep between attempts
+     * @param stopStrategy       the strategy used to decide when the retryer must stop retrying
+     * @param waitStrategy       the strategy used to decide how much time to sleep between attempts
      * @param rejectionPredicate the predicate used to decide if the attempt must be rejected
-     * or not. If an attempt is rejected, the retryer will retry the call, unless the stop
-     * strategy indicates otherwise or the thread is interrupted.
+     *                           or not. If an attempt is rejected, the retryer will retry the call, unless the stop
+     *                           strategy indicates otherwise or the thread is interrupted.
      */
     public Retryer(@Nonnull StopStrategy stopStrategy,
                    @Nonnull WaitStrategy waitStrategy,
@@ -54,21 +57,52 @@ public final class Retryer<V> {
      * must be made. Then the wait strategy is used to decide how must time to sleep,
      * and a new attempt is made.
      * @throws ExecutionException if the given callable throws an exception, and the
-     * rejection predicate considers the attempt as successful. The original exception
-     * is wrapped into an ExecutionException.
-     * @throws RetryException if all the attempts failed before the stop strategy decided
-     * to abort, or the thread was interrupted. Note that if the thread is interrupted,
-     * this exception is thrown and the thread's interrupt status is set.
+     *                            rejection predicate considers the attempt as successful. The original exception
+     *                            is wrapped into an ExecutionException.
+     * @throws RetryException     if all the attempts failed before the stop strategy decided
+     *                            to abort, or the thread was interrupted. Note that if the thread is interrupted,
+     *                            this exception is thrown and the thread's interrupt status is set.
      */
     public V call(Callable<V> callable) throws ExecutionException, RetryException {
+        return call(callable, ImmutableList.<RetryListener<V>>of());
+    }
+
+    /**
+     * Executes the given callable. If the rejection predicate
+     * accepts the attempt, the stop strategy is used to decide if a new attempt
+     * must be made. Then the wait strategy is used to decide how must time to sleep,
+     * and a new attempt is made.
+     * @throws ExecutionException if the given callable throws an exception, and the
+     *                            rejection predicate considers the attempt as successful. The original exception
+     *                            is wrapped into an ExecutionException.
+     * @throws RetryException     if all the attempts failed before the stop strategy decided
+     *                            to abort, or the thread was interrupted. Note that if the thread is interrupted,
+     *                            this exception is thrown and the thread's interrupt status is set.
+     */
+    public V call(Callable<V> callable, RetryListener<V> retryListener) throws ExecutionException, RetryException {
+        return call(callable, ImmutableList.<RetryListener<V>>of(retryListener));
+    }
+
+    /**
+     * Executes the given callable. If the rejection predicate
+     * accepts the attempt, the stop strategy is used to decide if a new attempt
+     * must be made. Then the wait strategy is used to decide how must time to sleep,
+     * and a new attempt is made.
+     * @throws ExecutionException if the given callable throws an exception, and the
+     *                            rejection predicate considers the attempt as successful. The original exception
+     *                            is wrapped into an ExecutionException.
+     * @throws RetryException     if all the attempts failed before the stop strategy decided
+     *                            to abort, or the thread was interrupted. Note that if the thread is interrupted,
+     *                            this exception is thrown and the thread's interrupt status is set.
+     */
+    public V call(Callable<V> callable, List<RetryListener<V>> retryListeners) throws ExecutionException, RetryException {
         long startTime = System.currentTimeMillis();
         for (int attemptNumber = 1; ; attemptNumber++) {
             Attempt<V> attempt;
             try {
                 V result = callable.call();
                 attempt = new ResultAttempt<V>(result);
-            }
-            catch (Throwable t) {
+            } catch (Throwable t) {
                 attempt = new ExceptionAttempt<V>(t);
             }
             if (!rejectionPredicate.apply(attempt)) {
@@ -78,15 +112,15 @@ public final class Retryer<V> {
             if (stopStrategy.shouldStop(attemptNumber, delaySinceFirstAttemptInMillis)) {
                 throw new RetryException(attemptNumber, attempt);
             }
-            else {
-                long sleepTime = waitStrategy.computeSleepTime(attemptNumber, System.currentTimeMillis() - startTime);
-                try {
-                    Thread.sleep(sleepTime);
-                }
-                catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    throw new RetryException(attemptNumber, attempt);
-                }
+            long sleepTime = waitStrategy.computeSleepTime(attemptNumber, System.currentTimeMillis() - startTime);
+            for (RetryListener<V> retryListener : retryListeners) {
+                retryListener.onRetry(attempt, attemptNumber, delaySinceFirstAttemptInMillis, sleepTime);
+            }
+            try {
+                Thread.sleep(sleepTime);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RetryException(attemptNumber, attempt);
             }
         }
     }
@@ -103,6 +137,7 @@ public final class Retryer<V> {
     @Immutable
     private static final class ResultAttempt<R> implements Attempt<R> {
         private final R result;
+
         public ResultAttempt(R result) {
             this.result = result;
         }
@@ -174,6 +209,7 @@ public final class Retryer<V> {
     public static class RetryerCallable<X> implements Callable<X> {
         private Retryer<X> retryer;
         private Callable<X> callable;
+        private List<RetryListener<X>> retryListeners = Lists.newArrayList();
 
         private RetryerCallable(Retryer<X> retryer,
                                 Callable<X> callable) {
@@ -187,7 +223,27 @@ public final class Retryer<V> {
          */
         @Override
         public X call() throws ExecutionException, RetryException {
-            return retryer.call(callable);
+            return retryer.call(callable, retryListeners);
         }
+
+        /**
+         * @param retryListener used for this callable.
+         */
+        public void addListener(RetryListener<X> retryListener) {
+            retryListeners.add(retryListener);
+        }
+    }
+
+    /**
+     * A callback to monitor the retry. Meant to execute non-blocking operations.
+     */
+    public static interface RetryListener<X> {
+        /**
+         * @param attempt                       last attempt
+         * @param attemptNumber                 number of attempts
+         * @param delaySinceFirstAttemptInMs    delay since first attempt (ms)
+         * @param sleepTimeUntilNextAttemptInMs sleep time until next attempt (ms)
+         */
+        void onRetry(Attempt<X> attempt, int attemptNumber, long delaySinceFirstAttemptInMs, long sleepTimeUntilNextAttemptInMs);
     }
 }
