@@ -1,4 +1,4 @@
-package fr.free.jnizet.retry;
+package com.txtr.retry;
 
 /**
  * A strategy used to decide if a retryer must stop retrying after a failed attempt or not

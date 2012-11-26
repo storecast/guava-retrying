@@ -1,4 +1,4 @@
-package fr.free.jnizet.retry;
+package com.txtr.retry;
 
 /**
  * A strategy used to decide how long to sleep before retrying, after a failed attempt

@@ -3,20 +3,6 @@ http://code.google.com/p/guava-libraries/issues/detail?id=490 by Jean-Baptiste N
 for pushing it up to my little corner of Maven Central so that others can easily pull it into their existing projects
 with minimal effort.
 
-Maven
---------
-
-    <dependency>
-      <groupId>com.github.rholder</groupId>
-      <artifactId>guava-retrying</artifactId>
-      <version>1.0.1</version>
-    </dependency>
-
-Gradle
---------
-
-    compile "com.github.rholder:guava-retrying:1.0.1"
-
 Example
 --------
 A minimal sample of some of the functionality would look like:
@@ -40,5 +26,3 @@ A minimal sample of some of the functionality would look like:
     } catch (ExecutionException e) {
         e.printStackTrace();
     }
-
-Javadoc can be found [here](http://rholder.github.com/guava-retrying/).

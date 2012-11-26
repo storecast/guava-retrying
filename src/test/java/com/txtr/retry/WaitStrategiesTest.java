@@ -1,4 +1,4 @@
-package fr.free.jnizet.retry;
+package com.txtr.retry;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;

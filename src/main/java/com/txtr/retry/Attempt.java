@@ -1,4 +1,4 @@
-package fr.free.jnizet.retry;
+package com.txtr.retry;
 
 import java.util.concurrent.ExecutionException;
 

@@ -1,6 +1,6 @@
-package fr.free.jnizet.retry;
+package com.txtr.retry;
 
-import fr.free.jnizet.retry.Retryer.RetryListener;
+import com.txtr.retry.Retryer.RetryListener;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -18,7 +18,7 @@ import org.junit.Test;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 
-import fr.free.jnizet.retry.Retryer.RetryerCallable;
+import com.txtr.retry.Retryer.RetryerCallable;
 
 public class RetryerBuilderTest {
 
