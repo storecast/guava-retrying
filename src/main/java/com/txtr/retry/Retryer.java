@@ -232,6 +232,15 @@ public final class Retryer<V> {
         public void addListener(RetryListener<X> retryListener) {
             retryListeners.add(retryListener);
         }
+
+        @Override
+        public String toString() {
+            final StringBuilder sb = new StringBuilder();
+            sb.append("RetryerCallable");
+            sb.append("{callable=").append(callable);
+            sb.append('}');
+            return sb.toString();
+        }
     }
 
     /**
