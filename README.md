@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/txtr/guava-retrying.svg?branch=master)](https://travis-ci.org/txtr/guava-retrying)
+
 This is a fork of the excellent RetryerBuilder code posted to
 http://code.google.com/p/guava-libraries/issues/detail?id=490 by Jean-Baptiste Nizet (JB).  I've added a Gradle build
 for pushing it up to my little corner of Maven Central so that others can easily pull it into their existing projects
